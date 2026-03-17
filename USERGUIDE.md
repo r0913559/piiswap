@@ -206,6 +206,17 @@ piiswap allowlist list
 piiswap anonymize evidence/ -r -o evidence_anon/
 ```
 
+For provider data (CSV/Excel), use a template for automatic column configuration:
+
+```bash
+piiswap templates                                          # list available templates
+piiswap anonymize data.csv --template microsoft-signin     # Microsoft 365 sign-in logs
+piiswap anonymize data.csv --template telegram-user        # Telegram user data
+piiswap anonymize data.csv --template isp-connection       # ISP connection logs
+```
+
+Templates use **blind mode**: every value in a PII column is anonymized, even if no detector recognizes it. This ensures provider-specific usernames and display names are always caught.
+
 This does the following:
 1. **Pass 1**: Scans ALL files and builds the complete mapping store
 2. **Pass 2**: Replaces PII with tokens in all files

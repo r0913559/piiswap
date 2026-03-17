@@ -15,22 +15,46 @@ Bidirectional PII anonymization pipeline for DFIR case data. Replaces personally
 - **Entity resolution**: `john.doe@company.com` and username `john.doe` are automatically linked to the same entity
 - **Allowlist**: IPs, hashes, timestamps, MITRE ATT&CK IDs, and protocols are never anonymized
 - **Encrypted mapping store**: Fernet-encrypted SQLite database keeps the PII↔token mappings safe at rest
+- **Provider templates**: `--template microsoft-signin` auto-configures column-aware anonymization for known data formats
+- **Blind column mode**: when a template marks a column as PII, ALL values are anonymized — no detector match needed
 - **Token format**: `ANONUSER001`, `ANONEMAIL003`, etc. — no special characters (safe for XML, SQL, JSON)
 
 ## Detected PII types
 
-| Type | Examples |
-|------|----------|
-| Email | `john.doe@company.com` |
-| Phone | `+32 471 12 34 56`, `0471/123456` |
-| IBAN | `BE68 5390 0754 7034` |
-| API key | `AKIA...`, `ghp_...`, `sk-...` |
-| Credential | `password: s3cret!`, `token=abc123` |
-| File path | `C:\Users\john\...`, `/home/john/...` (with username) |
-| Hostname | `DESKTOP-ABC123`, `SRV-DC01` |
-| Username | `john.doe`, `jdoe`, `admin01` |
-| Name | First/last names from Belgian + international wordlists |
-| Address | Belgian street addresses |
+| Type | Examples | Token |
+|------|----------|-------|
+| Email | `john.doe@company.com` | ANONEMAIL001 |
+| Phone | `+32 471 12 34 56`, `0471/123456` | ANONPHONE001 |
+| IBAN | `BE68 5390 0754 7034` | ANONIBAN001 |
+| API key | `AKIA...`, `ghp_...` | ANONKEY001 |
+| Credential | `password: s3cret!`, `token=abc123` | ANONPASS001 |
+| File path | `C:\Users\john\...`, `/home/john/...` | ANONUSER001 |
+| Hostname | `DESKTOP-ABC123`, `SRV-DC01` | ANONHOST001 |
+| Username | `john.doe`, `jdoe`, `admin01` | ANONUSER001 |
+| Social handle | `@john_doe`, `u/crypto_user`, profile URLs | ANONHANDLE001 |
+| Name | First/last names, display names via field labels | ANONNAME001 |
+| Address | Street addresses (Belgian + international) | ANONADDR001 |
+
+## Provider templates
+
+Auto-configure column-aware anonymization for known data formats:
+
+```bash
+piiswap templates                                       # list all templates
+piiswap anonymize data.csv --template microsoft-signin   # use a template
+```
+
+| Template | Description |
+|----------|-------------|
+| `microsoft-signin` | Microsoft 365 Sign-In Activity logs |
+| `microsoft-audit` | Microsoft 365 Audit Log |
+| `isp-connection` | ISP connection/session logs |
+| `crypto-kyc` | Cryptocurrency exchange KYC/account data |
+| `google-account` | Google Account activity/takeout data |
+| `telegram-user` | Telegram user/message data |
+| `meta-records` | Meta (Facebook/Instagram) subscriber records |
+
+Templates auto-set `--pii-columns` and `--keep-columns`. Explicit flags always override the template. Column matching is case-insensitive.
 
 ## Installation
 
@@ -236,7 +260,7 @@ pytest -v                        # verbose output
 ## Project status
 
 - **Phase 1** (complete): Core engine, 11 PII detectors, plaintext adapter, encrypted store, CLI
-- **Phase 2** (complete): Format adapters (docx, pdf, xlsx, csv, sqlite, evtx, pcap), social media handle detection, allowlist ecosystem (domain-aware, bulk import, IOC file), type filtering, column-aware mode, selective de-anonymization
+- **Phase 2** (complete): Format adapters (docx, pdf, xlsx, csv, sqlite, evtx, pcap), social media handle detection, field label detection, allowlist ecosystem (domain-aware, bulk import, IOC file), type filtering, column-aware mode with blind mode, selective de-anonymization, provider templates (7 providers), 126 tests
 - **Phase 3** (planned): SpaCy NER and local LLM plugins for context-aware detection
 
 ## Staying up to date

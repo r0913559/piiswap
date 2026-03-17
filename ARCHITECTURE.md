@@ -283,30 +283,47 @@ cryptography            openpyxl
                         scapy
 ```
 
-## 9. Column-Aware Processing (CSV/Excel)
+## 9. Provider Templates + Column-Aware Processing
 
 ```
-                      ┌──────────────────────────────────┐
-                      │     --pii-columns name,email      │
-                      │  OR --keep-columns ip,timestamp   │
-                      └──────────┬───────────────────────┘
-                                 │
-                                 v
+  piiswap anonymize data.csv --template telegram-user
+
+  ┌─────────────────────────────────────────────────────┐
+  │  Template "telegram-user"                            │
+  │    pii_columns:  [Username, Name, Phone]             │
+  │    keep_columns: [ID, IP, DTG, Type]                 │
+  └──────────┬──────────────────────────────────────────┘
+             │
+             v
   ┌──────────────────────────────────────────────────────┐
-  │  CSV/Excel File                                      │
+  │  Column-Aware Processing (case-insensitive matching) │
   │                                                      │
-  │  ┌────────┬────────┬─────────┬──────────┬──────────┐ │
-  │  │  name  │ email  │   ip    │timestamp │ action   │ │
-  │  ├────────┼────────┼─────────┼──────────┼──────────┤ │
-  │  │ ANON   │ ANON   │ kept    │ kept     │ kept     │ │
-  │  │ ANON   │ ANON   │ kept    │ kept     │ kept     │ │
-  │  └────────┴────────┴─────────┴──────────┴──────────┘ │
+  │  ┌────────────┬──────────┬─────────┬────────┬──────┐ │
+  │  │  Username  │  Name    │  Phone  │   IP   │ DTG  │ │
+  │  ├────────────┼──────────┼─────────┼────────┼──────┤ │
+  │  │ ANONUSER01 │ ANONNAME │ ANONPH  │ kept   │ kept │ │
+  │  │ ANONUSER02 │ ANONNAME │ ANONPH  │ kept   │ kept │ │
+  │  └────────────┴──────────┴─────────┴────────┴──────┘ │
   │                                                      │
-  │  Only PII columns are processed.                     │
-  │  IOC columns (ip, timestamp) are untouched.          │
+  │  Blind mode: if template marks column as PII,        │
+  │  ALL values are anonymized — even if no detector      │
+  │  recognizes them (GustavoGG77, funds4eva, Ot Boppin) │
   └──────────────────────────────────────────────────────┘
 
-Supported adapters: CsvAdapter (.csv, .tsv), XlsxAdapter (.xlsx)
+  Processing chain per cell:
+    1. Check mapping store (already seen?)     → return token
+    2. Run detectors (email, phone, etc.)      → register + return token
+    3. Blind mode: column says PII             → register + return token
+
+  Column name → PII type inference:
+    "username", "login", "screen"  → username
+    "email"                        → email
+    "phone", "mobile", "gsm"      → phone
+    "name", "naam"                 → name
+    "address", "adres"             → address
+
+Supported: CsvAdapter (.csv, .tsv), XlsxAdapter (.xlsx)
+Matching: case-insensitive (Username == username == USERNAME)
 ```
 
 ## 10. Selective De-anonymization
